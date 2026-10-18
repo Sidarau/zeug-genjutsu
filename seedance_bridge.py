@@ -13,12 +13,14 @@ def submit(folder,prompt,sirio,tein=None,status=print):
     if not setting('ENHANCOR_WEBHOOK_URL'):raise ValueError('Webhook URL required. Install cloudflared and restart the app, or set ENHANCOR_WEBHOOK_URL.')
     if not (folder/'audio-manifest.json').exists():raise ValueError('Audio separation must complete before submission.')
     from audio_workflow import prepare_seedance_video
-    status('Pitching isolated vocals +3 semitones and embedding in colored-depth video')
+    status('Embedding isolated vocals in the prepared video')
     prepared=folder/'seedance-input.mp4' if is_mesh(folder) else prepare_seedance_video(folder)
+    semitones=json.loads((folder/'audio-manifest.json').read_text()).get('pitch_semitones',3)
+    vocals=f'isolated vocals pitched up {semitones} semitones' if semitones else 'isolated vocals at their original pitch'
     status('Uploading video with embedded vocals and character references')
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:urls=list(pool.map(upload,[prepared,sirio]+([tein] if tein else [])))
     p={'resolution':'1080p','output_format':'mp4','pass_faces':True,'webhook_url':setting('ENHANCOR_WEBHOOK_URL','')}
-    p.update(mode='edit',is_draft=True,aspect_ratio='adaptive',videos=[urls[0]],audios=[],images=urls[1:],prompt=prompt.replace('@Audio1', 'the audio embedded in @Video1')+'\n@Video1 contains the colored-depth composite and embedded isolated vocals pitched up three semitones, without the music bed; use its embedded audio for performance and lip synchronization. '+('@Image1 is the primary character reference; @Image2 is the secondary character reference.' if tein else '@Image1 is the only replacement character reference.'));p.pop('duration',None)
+    p.update(mode='edit',is_draft=True,aspect_ratio='adaptive',videos=[urls[0]],audios=[],images=urls[1:],prompt=prompt.replace('@Audio1', 'the audio embedded in @Video1')+'\n@Video1 contains the colored-depth composite and embedded '+vocals+', without the music bed; use its embedded audio for performance and lip synchronization. '+('@Image1 is the primary character reference; @Image2 is the secondary character reference.' if tein else '@Image1 is the only replacement character reference.'));p.pop('duration',None)
     if Path(sirio).suffix.lower() in ['.mp4','.mov','.webm']:
         import av
         with av.open(str(prepared)) as source:
@@ -29,7 +31,7 @@ def submit(folder,prompt,sirio,tein=None,status=print):
         p.update(mode='multi_reference',duration=str(max(4,min(30,round(seconds)))),aspect_ratio=min(ratios,key=lambda r:abs(ratios[r]-ratio)))
         p['videos']=[urls[0],urls[1]]
         p['images']=urls[2:]
-        p['prompt']=prompt+'\n@Video1 is the source edit and contains isolated vocals pitched +3 semitones. @Video2 is only the primary character visual identity reference. Use only @Video1 audio for speech timing.'
+        p['prompt']=prompt+'\n@Video1 is the source edit and contains '+vocals+'. @Video2 is only the primary character visual identity reference. Use only @Video1 audio for speech timing.'
     if is_mesh(folder):
         mesh_mode=json.loads((folder/'workflow-mode.json').read_text()).get('mode')
         description='depth composite with face mesh overlay' if mesh_mode=='depth_mesh' else 'original video with face mesh overlay'

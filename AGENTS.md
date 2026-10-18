@@ -33,3 +33,8 @@ Use the same character references, draft-first submission, collection, original-
 Select **Advanced + Face mesh** in the UI or use `workflow.py prepare VIDEO --mode depth_mesh`. This runs the original depth/SAM pipeline, preserves its depth composite, then tracks the face from the original frames and overlays the mesh onto that composite. Landmarks are saved in `face-landmarks.json`. Review BOTH mask coverage and face tracking before approval. All artifacts, including depth, mask, mesh and embedded audio, are bound to review approval. Follow the same draft → approved HD → original-audio restoration flow.
 
 For setup with all three preparation modes, also install Python 3.12 and run `bash setup-face-mesh.sh`. This creates an isolated mesh environment; the main app can retain its existing Python version. A Google Face Landmarker model is downloaded at first use. No SAM/depth inference is used by fast mode. Mesh modes are experimental and currently optimized for one centered speaker.
+
+
+## Zeug fork
+
+In this fork, prefer `.venv/bin/python -m zeug.gj` over calling `workflow.py` directly. It adds the spend guard, the per-job ledger and `review-assist` (contact sheets of every frame for agents that read images but cannot play video). See `ZEUG.md`.

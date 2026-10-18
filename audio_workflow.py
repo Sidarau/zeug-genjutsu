@@ -82,9 +82,14 @@ def finish_preview(generated,folder):
             if p.dts is not None:p.stream=astream;out.mux(p)
     return target
 
-def prepare_seedance_video(folder, semitones=3):
-    """Embed +3-semitone isolated vocals into the colored-depth composite."""
+def pitch_semitones():
+    """Vocal pitch shift for the prepared input. Upstream default +3; GENJUTSU_PITCH_SEMITONES overrides (0 = none)."""
+    return int(os.getenv('GENJUTSU_PITCH_SEMITONES','3') or 0)
+
+def prepare_seedance_video(folder, semitones=None):
+    """Embed isolated vocals, pitch-shifted by `semitones` (+3 by default), into the colored-depth composite."""
     import subprocess,shutil
+    if semitones is None:semitones=pitch_semitones()
     folder=Path(folder);binary=shutil.which('rubberband')
     if not binary:raise RuntimeError('Rubber Band is required for pitch shifting.')
     pitched=folder/f'vocals-plus{semitones}.wav'
