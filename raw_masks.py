@@ -3,7 +3,9 @@ import os,json,time,zipfile,io
 import requests
 
 def segment_raw(video,folder,prompt='person'):
-    folder=Path(folder);h={'Authorization':'Bearer '+os.environ['REPLICATE_API_TOKEN']}
+    token=os.getenv('REPLICATE_API_TOKEN')
+    if not token:raise ValueError('REPLICATE_API_TOKEN is required for SAM 3 segmentation.')
+    folder=Path(folder);h={'Authorization':'Bearer '+token}
     with open(video,'rb') as f:r=requests.post('https://api.replicate.com/v1/files',headers=h,files={'content':f},timeout=120)
     r.raise_for_status();url=r.json()['urls']['get']
     payload={'version':'408f82fc20c300aac5d61d2e34ddb34cd0181e810e9f609d250aed14d5f81269','input':{'video':url,'prompt':prompt,'mask_only':True,'return_zip':True}}

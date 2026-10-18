@@ -1,0 +1,9 @@
+{
+  "_note": "USD per call. null = not priced yet; take the figure from the provider dashboard after the first real run. Replicate bills GPU seconds, so these are per-clip estimates for a clip of 30 s or less.",
+  "replicate:demucs": null,
+  "replicate:depth": null,
+  "huggingface:depth": 0,
+  "replicate:sam3": null,
+  "enhancor:seedance-draft": null,
+  "enhancor:seedance-1080p": null
+}

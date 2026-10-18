@@ -63,6 +63,8 @@ def depth_replicate(src,dst,model_name="lucataco/depth-anything-video"):
     with open(src,'rb') as f:r=requests.post('https://api.replicate.com/v1/files',headers=headers,files={'content':f},timeout=120)
     r.raise_for_status();url=r.json()['urls']['get']
     r=requests.post('https://api.replicate.com/v1/predictions',headers=headers,json={'version':v['id'],'input':{key:url}},timeout=60);r.raise_for_status();j=r.json()
+    # Persist the billed prediction ID for recovery, like audio-prediction.json and sam-raw-request.json.
+    Path(dst).with_name('depth-prediction.json').write_text(json.dumps(j,indent=2))
     for _ in range(180):
         if j['status'] in ['succeeded','failed','canceled']:break
         time.sleep(5);r=requests.get(j['urls']['get'],headers=headers,timeout=30);r.raise_for_status();j=r.json()
@@ -127,9 +129,10 @@ def composite(original,depth,seg,directory,audio_source=None):
 
 def run(src,directory,prompt='person',provider='replicate',status=print):
     directory=Path(directory);directory.mkdir(parents=True,exist_ok=True)
+    # Normalize first: it rejects clips over 30 s, which must happen before Demucs is billed.
+    status('Preparing video · 24 fps');meta=normalize(src,directory/'original.mp4')
     from audio_workflow import separate
     separate(src,directory,status)
-    status('Preparing video · 24 fps');meta=normalize(src,directory/'original.mp4')
     status('Video Depth Anything · generating depth')
     if provider=='huggingface':depth_hf(directory/'original.mp4',directory/'depth-raw.mp4')
     else:depth_replicate(directory/'original.mp4',directory/'depth-raw.mp4', 'chenxwh/depth-any-video' if provider=='replicate-chenxwh' else 'lucataco/depth-anything-video')

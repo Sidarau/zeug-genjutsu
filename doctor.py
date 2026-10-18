@@ -23,8 +23,13 @@ def main():
         valid=bool(value) and not any(x in value.lower() for x in ['your_key','your_api','replace_me','placeholder'])
         print(key+': '+('configured (not verified remotely)' if valid else 'MISSING'))
         if not valid:missing.append(key)
-    if setting('MEDIA_HOST','tmpfiles') not in ['tmpfiles','catbox']:
-        print('MEDIA_HOST must be tmpfiles or catbox');failed=True
+    host=setting('MEDIA_HOST','tmpfiles')
+    if host not in ['tmpfiles','catbox','s3']:
+        print('MEDIA_HOST must be tmpfiles, catbox or s3');failed=True
+    elif host=='s3':
+        ready=bool(setting('S3_MEDIA_BUCKET')) and bool(shutil.which('aws'))
+        print('MEDIA_HOST s3: '+('bucket and AWS CLI configured (access not verified)' if ready else 'needs S3_MEDIA_BUCKET and the AWS CLI'))
+        if not ready:missing.append('S3_MEDIA_BUCKET')
     if not setting('ENHANCOR_WEBHOOK_URL'):
         print('WEBHOOK: not running/configured — install cloudflared and launch the app, or set your own HTTPS callback')
         missing.append('ENHANCOR_WEBHOOK_URL')

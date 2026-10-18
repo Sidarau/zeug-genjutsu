@@ -1,4 +1,5 @@
-"""Public, direct media URLs for Enhancor. Configured fallback hosts are tried only for media hosting failures."""
+"""Direct media URLs for Enhancor: public hosts (tmpfiles, catbox) or a private S3 bucket with presigned
+URLs (s3). Configured fallback hosts are tried only for media hosting failures."""
 from pathlib import Path
 from urllib.parse import urlparse
 import requests,re,html,time,warnings
@@ -23,7 +24,10 @@ def _upload_once(path,host):
             if setting('CATBOX_USERHASH'):data['userhash']=setting('CATBOX_USERHASH')
             r=requests.post('https://catbox.moe/user/api.php',data=data,files={'fileToUpload':(path.name,f)},timeout=180)
             r.raise_for_status();url=r.text.strip()
-        else:raise ValueError('MEDIA_HOST must be tmpfiles or catbox')
+        elif host=='s3':
+            from zeug.s3_host import upload as s3_upload
+            url=s3_upload(path)
+        else:raise ValueError('MEDIA_HOST must be tmpfiles, catbox or s3')
     if not url.startswith('https://'):raise ValueError('Host did not return an HTTPS media URL')
     with requests.get(url,stream=True,timeout=60) as check:
         check.raise_for_status()
@@ -38,7 +42,9 @@ def upload(path):
     primary=setting('MEDIA_HOST','tmpfiles')
     fallback=setting('MEDIA_HOST_FALLBACKS','catbox')
     hosts=list(dict.fromkeys([primary]+[h.strip() for h in fallback.split(',') if h.strip()]))
-    if any(h not in ['tmpfiles','catbox'] for h in hosts):raise ValueError('Supported media hosts: tmpfiles, catbox')
+    # A private primary never falls back to a public host unless that is explicitly allowed.
+    if primary=='s3' and setting('MEDIA_HOST_ALLOW_PUBLIC_FALLBACK')!='1':hosts=[h for h in hosts if h=='s3']
+    if any(h not in ['tmpfiles','catbox','s3'] for h in hosts):raise ValueError('Supported media hosts: tmpfiles, catbox, s3')
     errors=[]
     for host in hosts:
         for attempt in range(2):
